@@ -701,6 +701,24 @@ pub struct TextNote {
     pub position: DVec2,
     /// The text; line breaks start new lines.
     pub text: String,
+    /// Optional paper text height in millimeters; `None` uses the text type's size.
+    #[serde(default)]
+    pub size_mm: Option<f64>,
+    /// Font family installed on the current system; empty uses the application default.
+    #[serde(default)]
+    pub font_family: String,
+    /// Paragraph alignment within the note's wrapping width.
+    #[serde(default)]
+    pub alignment: TextAlignment,
+    /// Bold face when available in the selected font family.
+    #[serde(default)]
+    pub bold: bool,
+    /// Italic face when available in the selected font family.
+    #[serde(default)]
+    pub italic: bool,
+    /// Draw an underline below each line.
+    #[serde(default)]
+    pub underline: bool,
     /// Wrapping width in paper millimeters for multiline text; `None` for
     /// single-line text (only explicit line breaks break it).
     #[serde(default)]
@@ -710,6 +728,15 @@ pub struct TextNote {
     pub rotation_deg: f64,
     #[serde(default)]
     pub leaders: Vec<Leader>,
+}
+
+/// Horizontal alignment of the lines in a text note.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
+pub enum TextAlignment {
+    #[default]
+    Left,
+    Center,
+    Right,
 }
 
 /// A leader line from a text to what it points at: one segment, or two

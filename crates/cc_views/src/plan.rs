@@ -249,6 +249,7 @@ fn draw_masses(d: &mut Drawing2D, project: &Project, geom: &ModelGeometry, level
                 size: 2.5,
                 anchor: crate::Anchor::Center,
                 angle: 0.0,
+                face: crate::TextFace::default(),
                 element: Some(*id),
             });
         }

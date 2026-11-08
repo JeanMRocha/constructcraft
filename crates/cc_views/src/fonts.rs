@@ -12,6 +12,115 @@ pub struct FontFile {
     pub index: u32,
 }
 
+#[derive(Clone, Debug)]
+struct InstalledFace {
+    family: String,
+    path: PathBuf,
+    index: u32,
+    bold: bool,
+    italic: bool,
+}
+
+/// Font families installed for the current user or system, sorted for a picker.
+pub fn system_families() -> &'static [String] {
+    static FAMILIES: OnceLock<Vec<String>> = OnceLock::new();
+    FAMILIES.get_or_init(|| {
+        let mut names: Vec<_> = installed_faces().iter().map(|face| face.family.clone()).collect();
+        names.sort_by_key(|name| name.to_lowercase());
+        names.dedup_by(|a, b| a.eq_ignore_ascii_case(b));
+        names
+    })
+}
+
+/// Load an installed face matching a family and requested emphasis, if present.
+pub fn system_face(family: &str, bold: bool, italic: bool) -> Option<FontFile> {
+    let faces = installed_faces();
+    let face = faces
+        .iter()
+        .find(|face| face.family.eq_ignore_ascii_case(family) && face.bold == bold && face.italic == italic)
+        .or_else(|| faces.iter().find(|face| face.family.eq_ignore_ascii_case(family)))?;
+    load(&face.path, face.index)
+}
+
+fn installed_faces() -> &'static [InstalledFace] {
+    static FACES: OnceLock<Vec<InstalledFace>> = OnceLock::new();
+    FACES.get_or_init(scan_installed_faces)
+}
+
+fn scan_installed_faces() -> Vec<InstalledFace> {
+    use skrifa::{MetadataProvider, string::StringId};
+    let mut dirs = Vec::new();
+    if cfg!(windows) {
+        let windir = std::env::var_os("WINDIR").map(PathBuf::from).unwrap_or_else(|| PathBuf::from(r"C:\Windows"));
+        dirs.push(windir.join("Fonts"));
+        if let Some(local) = std::env::var_os("LOCALAPPDATA") {
+            dirs.push(PathBuf::from(local).join("Microsoft/Windows/Fonts"));
+        }
+    } else if cfg!(target_os = "macos") {
+        dirs.extend([PathBuf::from("/System/Library/Fonts"), PathBuf::from("/Library/Fonts")]);
+        if let Some(home) = std::env::var_os("HOME") {
+            dirs.push(PathBuf::from(home).join("Library/Fonts"));
+        }
+    } else {
+        dirs.extend([PathBuf::from("/usr/share/fonts"), PathBuf::from("/usr/local/share/fonts")]);
+        if let Some(home) = std::env::var_os("HOME") {
+            dirs.push(PathBuf::from(home).join(".local/share/fonts"));
+        }
+    }
+    let mut files = Vec::new();
+    for dir in dirs {
+        collect_font_files(&dir, &mut files, 0);
+    }
+    files.sort();
+    files.dedup();
+    let mut faces = Vec::new();
+    for path in files {
+        let Some(data) = std::fs::read(&path).ok().filter(|bytes| bytes.len() as u64 <= MAX_FONT_BYTES) else {
+            continue;
+        };
+        for index in 0..32 {
+            let Ok(font) = skrifa::FontRef::from_index(&data, index) else { break };
+            let Some(family) = font.localized_strings(StringId::FAMILY_NAME).english_or_first() else { continue };
+            let family = family.to_string();
+            if family.trim().is_empty() {
+                continue;
+            }
+            let style = font
+                .localized_strings(StringId::SUBFAMILY_NAME)
+                .english_or_first()
+                .map(|name| name.to_string().to_ascii_lowercase())
+                .unwrap_or_default();
+            faces.push(InstalledFace {
+                family,
+                path: path.clone(),
+                index,
+                bold: style.contains("bold") || style.contains("semibold") || style.contains("black"),
+                italic: style.contains("italic") || style.contains("oblique"),
+            });
+        }
+    }
+    faces
+}
+
+fn collect_font_files(dir: &Path, out: &mut Vec<PathBuf>, depth: u8) {
+    if depth > 4 {
+        return;
+    }
+    let Ok(entries) = std::fs::read_dir(dir) else { return };
+    for entry in entries.flatten() {
+        let path = entry.path();
+        if path.is_dir() {
+            collect_font_files(&path, out, depth + 1);
+        } else if path
+            .extension()
+            .and_then(|e| e.to_str())
+            .is_some_and(|e| matches!(e.to_ascii_lowercase().as_str(), "ttf" | "otf" | "ttc" | "otc"))
+        {
+            out.push(path);
+        }
+    }
+}
+
 impl FontFile {
     pub fn font_ref(&self) -> Option<skrifa::FontRef<'_>> {
         skrifa::FontRef::from_index(&self.data, self.index).ok()

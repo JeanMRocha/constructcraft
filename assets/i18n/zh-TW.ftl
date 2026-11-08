@@ -3042,3 +3042,15 @@ dlg-import-obj = 匯入 OBJ
 label-obj-units = 檔案單位
 label-obj-up = 向上軸
 label-obj-merge = 匯入為單一元件
+
+text-custom-size = 使用自訂大小
+text-size = 文字高度
+text-font = 字型
+text-font-default = 類型預設字型
+text-alignment = 對齊方式
+text-align-left = 靠左
+text-align-center = 置中
+text-align-right = 靠右
+text-bold = 粗體
+text-italic = 斜體
+text-underline = 底線

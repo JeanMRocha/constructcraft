@@ -3044,3 +3044,15 @@ dlg-import-obj = ນຳເຂົ້າ OBJ
 label-obj-units = ຫົວໜ່ວຍຂອງໄຟລ໌
 label-obj-up = ແກນຕັ້ງ
 label-obj-merge = ນຳເຂົ້າເປັນອົງປະກອບດຽວ
+
+text-custom-size = ໃຊ້ຂະໜາດກຳນົດເອງ
+text-size = ຄວາມສູງຂໍ້ຄວາມ
+text-font = ແບບອັກສອນ
+text-font-default = ແບບອັກສອນເລີ່ມຕົ້ນຂອງປະເພດ
+text-alignment = ການຈັດວາງ
+text-align-left = ຊ້າຍ
+text-align-center = ກາງ
+text-align-right = ຂວາ
+text-bold = ຕົວໜາ
+text-italic = ຕົວອຽງ
+text-underline = ຂີດກ້ອງ

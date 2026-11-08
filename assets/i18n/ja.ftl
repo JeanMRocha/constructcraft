@@ -3042,3 +3042,15 @@ dlg-import-obj = OBJ をインポート
 label-obj-units = ファイルの単位
 label-obj-up = 上方向の軸
 label-obj-merge = 1 つのコンポーネントとしてインポート
+
+text-custom-size = カスタムサイズを使用
+text-size = 文字の高さ
+text-font = フォント
+text-font-default = タイプの既定フォント
+text-alignment = 配置
+text-align-left = 左揃え
+text-align-center = 中央揃え
+text-align-right = 右揃え
+text-bold = 太字
+text-italic = 斜体
+text-underline = 下線

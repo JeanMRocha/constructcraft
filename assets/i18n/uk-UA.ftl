@@ -3043,3 +3043,15 @@ dlg-import-obj = Імпортувати OBJ
 label-obj-units = Одиниці файлу
 label-obj-up = Вертикальна вісь
 label-obj-merge = Імпортувати як один компонент
+
+text-custom-size = Використовувати власний розмір
+text-size = Висота тексту
+text-font = Шрифт
+text-font-default = Шрифт типу за замовчуванням
+text-alignment = Вирівнювання
+text-align-left = Ліворуч
+text-align-center = По центру
+text-align-right = Праворуч
+text-bold = Жирний
+text-italic = Курсив
+text-underline = Підкреслення

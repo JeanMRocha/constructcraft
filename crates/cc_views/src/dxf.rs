@@ -481,6 +481,7 @@ mod tests {
             size: 2.5,
             anchor: Anchor::Center,
             angle: std::f64::consts::FRAC_PI_2,
+            face: crate::TextFace::default(),
             element: None,
         });
         let dxf = to_dxf(&d, DxfScale::model(50), &|p| match p {

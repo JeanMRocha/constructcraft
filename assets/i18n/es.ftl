@@ -3042,3 +3042,15 @@ dlg-import-obj = Importar OBJ
 label-obj-units = Unidades del archivo
 label-obj-up = Eje vertical
 label-obj-merge = Importar como un solo componente
+
+text-custom-size = Usar tamaño personalizado
+text-size = Altura del texto
+text-font = Fuente
+text-font-default = Fuente predeterminada del tipo
+text-alignment = Alineación
+text-align-left = Izquierda
+text-align-center = Centro
+text-align-right = Derecha
+text-bold = Negrita
+text-italic = Cursiva
+text-underline = Subrayado

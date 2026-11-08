@@ -36,7 +36,7 @@ mod topography;
 
 pub use annotate::{DimensionLayout, HIGHLIGHT_ONLY, dimension_layout};
 pub use component_view::{ComponentView, ComponentViewKind, ViewConnector, component_view};
-pub use drawing::{Anchor, Drawing2D, LineStyle, Pen, Prim, ResolvedPen, SectionHandle, TagHandle, halftone};
+pub use drawing::{Anchor, Drawing2D, LineStyle, Pen, Prim, ResolvedPen, SectionHandle, TagHandle, TextFace, halftone};
 pub use legend::legend;
 pub use plan::{is_structural, plan, plan_of, section_pieces};
 pub use projected::{Frame, Look, axonometric, elevation, section};

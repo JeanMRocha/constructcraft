@@ -52,7 +52,9 @@ fn element_is_valid(e: &Element) -> bool {
         ElementKind::Text(t) => {
             let leaders = t.leaders.iter().all(|l| l.end.is_finite() && l.elbow.is_none_or(|e| e.is_finite()));
             let width = t.width.is_none_or(|w| w.is_finite() && w > 0.0);
-            leaders && width && t.rotation_deg.is_finite() && t.position.is_finite()
+            let size = t.size_mm.is_none_or(|s| s.is_finite() && s > 0.0 && s <= 1000.0);
+            let family = t.font_family.len() <= 256 && !t.font_family.chars().any(char::is_control);
+            leaders && width && size && family && t.rotation_deg.is_finite() && t.position.is_finite()
         }
         ElementKind::Column(c) => {
             finite(&[c.rotation_deg, c.base_offset, c.height]) && c.position.is_finite() && top_ok(c.top)

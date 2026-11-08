@@ -3042,3 +3042,15 @@ dlg-import-obj = Import OBJ
 label-obj-units = File units
 label-obj-up = Up axis
 label-obj-merge = Import as a single component
+
+text-custom-size = Use custom size
+text-size = Text height
+text-font = Font
+text-font-default = Type default font
+text-alignment = Alignment
+text-align-left = Left
+text-align-center = Center
+text-align-right = Right
+text-bold = Bold
+text-italic = Italic
+text-underline = Underline
