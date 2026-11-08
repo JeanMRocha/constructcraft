@@ -303,7 +303,7 @@ pub fn show(ui: &mut Ui, state: &mut AppState, view_id: ViewId) {
         state.cursor = Some(xf.to_world(p));
     }
     let editing = !zooming
-        && (crate::text_tool::canvas(&resp, state, view_id, &xf, &drawing)
+        && (crate::text_tool::canvas(ui, &resp, state, view_id, &xf, &drawing)
             || crate::dim_edit::canvas(ui, &resp, &painter, state, view_id, &xf, px_per_mm, &drawing));
     if !zooming && !editing {
         crate::tools::handle(ui, &resp, &painter, state, &view, &xf, &drawing);
