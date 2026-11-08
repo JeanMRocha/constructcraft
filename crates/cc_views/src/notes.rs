@@ -1,7 +1,7 @@
 //! Text notes and their leaders. Sizes are paper millimeters converted with
 //! the view scale, like the other annotations; text widths are estimated
-//! from the character count (the same estimate wraps multiline text, places
-//! leaders and makes the text clickable).
+//! from the selected font when it is installed; the application default uses
+//! an average character width for wrapping, leader placement and hit testing.
 
 use crate::drawing::Anchor;
 use crate::{Drawing2D, LineStyle};
@@ -16,35 +16,41 @@ const SYMBOL_FILL: [u8; 4] = [40, 40, 40, 255];
 /// Nearly invisible fill that makes the text clickable.
 const PICK_AREA: [u8; 4] = [255, 255, 255, 1];
 
-/// Lines of `text`: explicit line breaks, and words wrapped to `width`
-/// paper millimeters when given (a word longer than the width is split).
+/// Lines of `text`: explicit line breaks and words wrapped to `width`
+/// paper millimeters when given.
 pub fn wrap(text: &str, size: f64, width: Option<f64>) -> Vec<String> {
-    let per_line = width.map(|w| ((w / (size * CHAR_WIDTH)).floor() as usize).max(1));
+    wrap_measured(text, width, |s| s.chars().count() as f64 * size * CHAR_WIDTH)
+}
+
+fn wrap_measured(text: &str, width: Option<f64>, measure: impl Fn(&str) -> f64) -> Vec<String> {
     let mut out = Vec::new();
     for paragraph in text.split('\n') {
-        let Some(max) = per_line else {
+        let Some(max_width) = width else {
             out.push(paragraph.trim_end().to_string());
             continue;
         };
         let mut line = String::new();
         for word in paragraph.split_whitespace() {
-            let mut word: Vec<char> = word.chars().collect();
-            // Split words that do not fit on a line of their own.
-            while word.len() > max {
-                if !line.is_empty() {
-                    out.push(std::mem::take(&mut line));
-                }
-                out.push(word.drain(..max).collect());
-            }
-            let word: String = word.into_iter().collect();
-            let len = line.chars().count();
-            if len > 0 && len + 1 + word.chars().count() > max {
-                out.push(std::mem::take(&mut line));
+            let candidate = if line.is_empty() { word.to_string() } else { format!("{line} {word}") };
+            if measure(&candidate) <= max_width {
+                line = candidate;
+                continue;
             }
             if !line.is_empty() {
-                line.push(' ');
+                out.push(std::mem::take(&mut line));
             }
-            line.push_str(&word);
+            let mut piece = String::new();
+            for ch in word.chars() {
+                let mut next = piece.clone();
+                next.push(ch);
+                if !piece.is_empty() && measure(&next) > max_width {
+                    out.push(std::mem::take(&mut piece));
+                }
+                piece.push(ch);
+            }
+            if !piece.is_empty() {
+                line = piece;
+            }
         }
         out.push(line);
     }
@@ -77,9 +83,13 @@ impl TextLayout {
 /// Layout of `note` with text of `size` paper millimeters at `scale`.
 pub fn text_layout(note: &TextNote, size: f64, scale: u32) -> TextLayout {
     let k = scale as f64 / 1000.0;
-    let lines = wrap(&note.text, size, note.width);
-    let longest = lines.iter().map(|l| l.chars().count()).max().unwrap_or(0) as f64;
-    let width = note.width.unwrap_or(longest * size * CHAR_WIDTH).max(size * CHAR_WIDTH);
+    let measure = |line: &str| {
+        crate::fonts::text_width(line, &note.font_family, note.bold, note.italic, size)
+            .unwrap_or(line.chars().count() as f64 * size * CHAR_WIDTH)
+    };
+    let lines = wrap_measured(&note.text, note.width, measure);
+    let longest = lines.iter().map(|line| measure(line)).fold(0.0, f64::max);
+    let width = note.width.unwrap_or(longest).max(size * CHAR_WIDTH);
     let height = lines.len().max(1) as f64 * size * LINE_HEIGHT;
     let angle = note.rotation_deg.to_radians();
     let rot = DVec2::from_angle(angle);
@@ -91,7 +101,7 @@ pub fn text_layout(note: &TextNote, size: f64, scale: u32) -> TextLayout {
             .into_iter()
             .enumerate()
             .map(|(i, text)| {
-                let line_width = text.chars().count() as f64 * size * CHAR_WIDTH;
+                let line_width = measure(&text);
                 let x = match note.alignment {
                     cc_core::TextAlignment::Left => 0.0,
                     cc_core::TextAlignment::Center => (width - line_width) * 0.5,
@@ -174,7 +184,10 @@ pub fn draw_note(d: &mut Drawing2D, note: &TextNote, size: f64, scale: u32, id: 
             };
             d.styled_tag_text(*pos, line.clone(), size, Anchor::LeftBottom, layout.angle, face, id);
             if note.underline {
-                let width = line.chars().count() as f64 * size * CHAR_WIDTH * scale as f64 / 1000.0;
+                let width = crate::fonts::text_width(line, &note.font_family, note.bold, note.italic, size)
+                    .unwrap_or(line.chars().count() as f64 * size * CHAR_WIDTH)
+                    * scale as f64
+                    / 1000.0;
                 let down = DVec2::from_angle(layout.angle).perp() * (size * 0.12 * scale as f64 / 1000.0);
                 d.line(*pos - down, *pos + DVec2::from_angle(layout.angle) * width - down, LineStyle::Annotation, id);
             }

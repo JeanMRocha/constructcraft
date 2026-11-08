@@ -4,12 +4,39 @@
 //! boxes, as before.
 
 use std::path::{Path, PathBuf};
-use std::sync::OnceLock;
+use std::sync::{Arc, Mutex, OnceLock};
 
 /// A font file and the face to use in it (collections hold several).
 pub struct FontFile {
     pub data: Vec<u8>,
     pub index: u32,
+}
+
+/// Paper width of text in an installed font, using glyph advances.
+pub fn text_width(text: &str, family: &str, bold: bool, italic: bool, size: f64) -> Option<f64> {
+    use skrifa::{
+        MetadataProvider,
+        instance::{LocationRef, Size},
+    };
+    if family.is_empty() || !size.is_finite() || size <= 0.0 {
+        return None;
+    }
+    static CACHE: OnceLock<Mutex<std::collections::HashMap<(String, bool, bool), Option<Arc<FontFile>>>>> =
+        OnceLock::new();
+    let key = (family.to_lowercase(), bold, italic);
+    let cache = CACHE.get_or_init(Default::default);
+    let file =
+        cache.lock().ok()?.entry(key).or_insert_with(|| system_face(family, bold, italic).map(Arc::new)).clone()?;
+    let font = skrifa::FontRef::from_index(&file.data, file.index).ok()?;
+    let charmap = font.charmap();
+    let metrics = font.glyph_metrics(Size::new(size as f32), LocationRef::default());
+    Some(
+        text.chars()
+            .map(|c| {
+                charmap.map(c).and_then(|glyph| metrics.advance_width(glyph)).unwrap_or((size * 0.6) as f32) as f64
+            })
+            .sum(),
+    )
 }
 
 #[derive(Clone, Debug)]
