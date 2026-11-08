@@ -229,9 +229,10 @@ fn leader_args(l: &Leader) -> LeaderArgs {
 
 /// A double click on a note with the Select tool opens it in the editor.
 /// Returns true when the pointer was used.
-pub fn canvas(resp: &Response, state: &mut AppState, view: ViewId, xf: &Xf, drawing: &Drawing2D) -> bool {
+pub fn canvas(ui: &Ui, resp: &Response, state: &mut AppState, view: ViewId, xf: &Xf, drawing: &Drawing2D) -> bool {
+    let context_menu = text_context_menu(ui, resp, state, view, xf, drawing);
     if state.tool != Tool::Select || !resp.double_clicked() {
-        return false;
+        return context_menu;
     }
     let Some(pos) = resp.hover_pos() else { return false };
     let Some(hit) = drawing.hit_test(xf.to_world(pos), 5.0 / xf.scale) else { return false };
@@ -248,6 +249,126 @@ pub fn canvas(resp: &Response, state: &mut AppState, view: ViewId, xf: &Xf, draw
         multiline,
         target: TextTarget::Existing(hit),
         focus: true,
+    });
+    true
+}
+
+/// Apply rich-text styling directly from a text note's right-click menu.
+fn text_context_menu(
+    ui: &Ui,
+    resp: &Response,
+    state: &mut AppState,
+    view: ViewId,
+    xf: &Xf,
+    drawing: &Drawing2D,
+) -> bool {
+    let target_key = egui::Id::new(("text-context-target", view.0));
+    let clicked_text = resp.secondary_clicked().then(|| {
+        resp.interact_pointer_pos()
+            .and_then(|pos| drawing.hit_test(xf.to_world(pos), 5.0 / xf.scale))
+            .filter(|id| matches!(state.project().element(*id).map(|e| &e.kind), Some(ElementKind::Text(note)) if note.view == view))
+    }).flatten();
+    if resp.secondary_clicked() {
+        ui.ctx().data_mut(|data| {
+            if let Some(id) = clicked_text {
+                data.insert_temp(target_key, id.0);
+            } else {
+                data.remove::<u64>(target_key);
+            }
+        });
+        if let Some(id) = clicked_text {
+            state.selection = BTreeSet::from([id]);
+        }
+    }
+    if clicked_text.is_none() && !resp.context_menu_opened() {
+        return false;
+    }
+
+    resp.context_menu(|ui| {
+        let Some(id) = ui.ctx().data(|data| data.get_temp::<u64>(target_key)).map(ElementId) else {
+            ui.close();
+            return;
+        };
+        let Some(ElementKind::Text(note)) = state.project().element(id).map(|e| &e.kind) else {
+            ui.close();
+            return;
+        };
+        let note = note.clone();
+        let set = |state: &mut AppState, field: &str, f: &dyn Fn(&mut TextNote)| {
+            crate::engine_edit::element(state, id, Some(crate::properties::key((id, field))), |e| {
+                if let ElementKind::Text(n) = &mut e.kind {
+                    f(n);
+                }
+            });
+        };
+
+        ui.label(t!("section-text"));
+        ui.separator();
+        let inherited_size = state
+            .project()
+            .element(id)
+            .and_then(|e| state.project().element_type(e.type_id))
+            .and_then(|ty| match &ty.data {
+                cc_core::TypeData::Text { size, .. } => Some(*size),
+                _ => None,
+            })
+            .unwrap_or(2.5);
+        let mut custom_size = note.size_mm.is_some();
+        if ui.checkbox(&mut custom_size, t!("text-custom-size")).changed() {
+            set(state, "text-size-mode", &|n| n.size_mm = custom_size.then_some(inherited_size));
+        }
+        if custom_size {
+            let mut size = note.size_mm.unwrap_or(inherited_size);
+            if ui.add(egui::DragValue::new(&mut size).speed(0.1).range(0.5..=1000.0).suffix(" mm")).changed() {
+                set(state, "text-size", &|n| n.size_mm = Some(size));
+            }
+        } else {
+            ui.label(format!("{}: {} mm", t!("text-size"), cc_views::format::number(inherited_size, 1)));
+        }
+
+        let families = cc_views::fonts::system_families();
+        let mut family = note.font_family.clone();
+        let selected_font = if family.is_empty() { t!("text-font-default") } else { family.clone() };
+        egui::ComboBox::from_id_salt(("text-context-font", id.0)).selected_text(selected_font).show_ui(ui, |ui| {
+            ui.selectable_value(&mut family, String::new(), t!("text-font-default"));
+            for name in families {
+                ui.selectable_value(&mut family, name.clone(), name);
+            }
+        });
+        if family != note.font_family {
+            set(state, "text-font", &|n| n.font_family = family.clone());
+        }
+
+        let mut alignment = note.alignment;
+        egui::ComboBox::from_id_salt(("text-context-alignment", id.0))
+            .selected_text(match alignment {
+                cc_core::TextAlignment::Left => t!("text-align-left"),
+                cc_core::TextAlignment::Center => t!("text-align-center"),
+                cc_core::TextAlignment::Right => t!("text-align-right"),
+            })
+            .show_ui(ui, |ui| {
+                ui.selectable_value(&mut alignment, cc_core::TextAlignment::Left, t!("text-align-left"));
+                ui.selectable_value(&mut alignment, cc_core::TextAlignment::Center, t!("text-align-center"));
+                ui.selectable_value(&mut alignment, cc_core::TextAlignment::Right, t!("text-align-right"));
+            });
+        if alignment != note.alignment {
+            set(state, "text-alignment", &|n| n.alignment = alignment);
+        }
+
+        for (label, field, value) in [
+            (t!("text-bold"), "bold", note.bold),
+            (t!("text-italic"), "italic", note.italic),
+            (t!("text-underline"), "underline", note.underline),
+        ] {
+            let mut enabled = value;
+            if ui.checkbox(&mut enabled, label).changed() {
+                set(state, field, &|n| match field {
+                    "bold" => n.bold = enabled,
+                    "italic" => n.italic = enabled,
+                    _ => n.underline = enabled,
+                });
+            }
+        }
     });
     true
 }
