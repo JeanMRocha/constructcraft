@@ -144,8 +144,20 @@ pub fn text_tool(
     }
     let width = opts.multiline.then_some(opts.width);
     let leaders: Vec<Leader> = leader_from(&points, opts.symbol).into_iter().collect();
-    let preview =
-        TextNote { view: view.id, position: s.point, text: t!("text-placeholder"), width, rotation_deg: 0.0, leaders };
+    let preview = TextNote {
+        view: view.id,
+        position: s.point,
+        text: t!("text-placeholder"),
+        size_mm: None,
+        font_family: String::new(),
+        alignment: cc_core::TextAlignment::Left,
+        bold: false,
+        italic: false,
+        underline: false,
+        width,
+        rotation_deg: 0.0,
+        leaders,
+    };
     ghost(painter, xf, &preview, size, scale, px_per_mm);
     if resp.clicked() {
         let target = TextTarget::New { type_id, position: s.point, leaders: preview.leaders, width };

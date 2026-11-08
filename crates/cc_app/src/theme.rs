@@ -11,6 +11,7 @@ use egui::{TextStyle, Visuals};
 use std::borrow::Cow;
 use std::cell::Cell;
 use std::sync::Arc;
+use std::sync::{Mutex, OnceLock};
 
 /// Color tokens of a theme.
 #[derive(Debug, Clone, Copy)]
@@ -315,6 +316,13 @@ fn fonts() -> FontDefinitions {
     let mut semibold_family = vec!["inter-semibold".to_string()];
     semibold_family.extend(fallbacks);
     fonts.families.insert(semibold(), semibold_family);
+    for (key, bytes, index) in user_text_fonts().lock().unwrap_or_else(|p| p.into_inner()).iter() {
+        fonts.font_data.insert(
+            key.clone(),
+            Arc::new(FontData { font: Cow::Owned(bytes.clone()), index: *index, tweak: Default::default() }),
+        );
+        fonts.families.insert(FontFamily::Name(key.clone().into()), vec![key.clone(), "inter".into()]);
+    }
     // Chinese, Japanese, Korean and Lao text from the system's fonts, last.
     for (i, fallback) in cc_views::fonts::fallbacks().enumerate() {
         let name = format!("fallback-{i}");
@@ -325,6 +333,33 @@ fn fonts() -> FontDefinitions {
         }
     }
     fonts
+}
+
+fn user_text_fonts() -> &'static Mutex<Vec<(String, Vec<u8>, u32)>> {
+    static FONTS: OnceLock<Mutex<Vec<(String, Vec<u8>, u32)>>> = OnceLock::new();
+    FONTS.get_or_init(|| Mutex::new(Vec::new()))
+}
+
+/// Ensure an installed typeface is available to the drawing painter.
+pub fn register_text_font(ctx: &egui::Context, family: &str, bold: bool, italic: bool) -> Option<FontFamily> {
+    if family.trim().is_empty() {
+        return None;
+    }
+    let key = format!("cc-text-{}-{}-{}", family.to_lowercase(), bold as u8, italic as u8);
+    let added = {
+        let mut fonts = user_text_fonts().lock().unwrap_or_else(|p| p.into_inner());
+        if fonts.iter().any(|(name, _, _)| name == &key) {
+            false
+        } else {
+            let face = cc_views::fonts::system_face(family, bold, italic)?;
+            fonts.push((key.clone(), face.data, face.index));
+            true
+        }
+    };
+    if added {
+        ctx.set_fonts(self::fonts());
+    }
+    Some(FontFamily::Name(key.into()))
 }
 
 fn visuals(p: &Palette) -> Visuals {

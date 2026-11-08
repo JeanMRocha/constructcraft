@@ -90,7 +90,15 @@ pub fn text_layout(note: &TextNote, size: f64, scale: u32) -> TextLayout {
         lines: lines
             .into_iter()
             .enumerate()
-            .map(|(i, text)| (at(0.0, -(i as f64 * LINE_HEIGHT + 1.25) * size), text))
+            .map(|(i, text)| {
+                let line_width = text.chars().count() as f64 * size * CHAR_WIDTH;
+                let x = match note.alignment {
+                    cc_core::TextAlignment::Left => 0.0,
+                    cc_core::TextAlignment::Center => (width - line_width) * 0.5,
+                    cc_core::TextAlignment::Right => width - line_width,
+                };
+                (at(x, -(i as f64 * LINE_HEIGHT + 1.25) * size), text)
+            })
             .collect(),
         angle,
         size,
@@ -158,7 +166,18 @@ pub fn draw_note(d: &mut Drawing2D, note: &TextNote, size: f64, scale: u32, id: 
     }
     for (pos, line) in &layout.lines {
         if !line.is_empty() {
-            d.tag_text(*pos, line.clone(), size, Anchor::LeftBottom, layout.angle, id);
+            let face = crate::TextFace {
+                family: note.font_family.clone(),
+                bold: note.bold,
+                italic: note.italic,
+                underline: note.underline,
+            };
+            d.styled_tag_text(*pos, line.clone(), size, Anchor::LeftBottom, layout.angle, face, id);
+            if note.underline {
+                let width = line.chars().count() as f64 * size * CHAR_WIDTH * scale as f64 / 1000.0;
+                let down = DVec2::from_angle(layout.angle).perp() * (size * 0.12 * scale as f64 / 1000.0);
+                d.line(*pos - down, *pos + DVec2::from_angle(layout.angle) * width - down, LineStyle::Annotation, id);
+            }
         }
     }
     for leader in &note.leaders {
@@ -183,7 +202,7 @@ pub fn notes(d: &mut Drawing2D, project: &Project, view: ViewId, scale: u32) {
     for e in project.elements.values() {
         let ElementKind::Text(note) = &e.kind else { continue };
         if note.view == view {
-            draw_note(d, note, note_size(project, e.type_id), scale, Some(e.id));
+            draw_note(d, note, note.size_mm.unwrap_or_else(|| note_size(project, e.type_id)), scale, Some(e.id));
         }
     }
 }
@@ -197,6 +216,12 @@ mod tests {
             view: ViewId(1),
             position: DVec2::new(10.0, 5.0),
             text: text.into(),
+            size_mm: None,
+            font_family: String::new(),
+            alignment: cc_core::TextAlignment::Left,
+            bold: false,
+            italic: false,
+            underline: false,
             width,
             rotation_deg: 0.0,
             leaders: Vec::new(),

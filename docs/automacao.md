@@ -41,6 +41,13 @@ ccad -p casa.ccad --save run element_set id=57 'params={"shape": {"Gable": {"slo
 
 Objetos se mesclam campo a campo; listas e valores simples substituem; `null` limpa um valor opcional. `material_set` e `units_set` (no formato de `material_get` e `units_get`) funcionam do mesmo jeito.
 
+**Estilo das notas de texto.** `text_create` cria uma nota com o tamanho herdado do tipo. Depois, `element_get` e `element_set` leem ou alteram `size_mm` (mm, `null` usa o tipo), `font_family` (família instalada no sistema), `alignment` (`Left`, `Center`, `Right`), `bold`, `italic` e `underline`. Os campos ausentes em projetos antigos usam esses mesmos padrões.
+
+```sh
+ccad -p casa.ccad run element_get id=42
+ccad -p casa.ccad --save run element_set id=42 'params={"size_mm": 4, "font_family": "Arial", "alignment": "Center", "bold": true, "italic": false, "underline": true}'
+```
+
 **Gráficos das vistas.** O que uma vista mostra e como faz parte da vista: `view_graphics_get` lista a visibilidade e as sobreposições de cada categoria, os filtros aplicados e as sobreposições de elementos; `view_graphics_set` mostra ou oculta uma categoria e sobrepõe suas linhas em projeção e de corte (cor, espessura em mm de papel, padrão), preenchimentos de superfície e de corte (cor, padrão), meio-tom e transparência; `element_override_set` e `element_hide_in_view` fazem o mesmo para elementos numa vista. As sobreposições são objetos como `{"cut_lines": {"color": [255, 0, 0], "weight": 0.5, "pattern": "Dash"}, "cut_fill": {"pattern": "Solid", "color": [200, 200, 200]}, "halftone": true, "transparency": 0.4}` e se mesclam como `params` (`null` redefine um atributo, `reset: true` recomeça). Valem em plantas, plantas de forro, elevações, cortes, vistas 3D, folhas e exportações PDF/SVG.
 
 ```sh

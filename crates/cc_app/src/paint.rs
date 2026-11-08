@@ -318,7 +318,7 @@ pub fn paint_drawing(painter: &Painter, d: &Drawing2D, xf: &Xf, opts: &PaintOpti
                 let hl = element.is_some_and(|e| opts.highlight.contains(&e));
                 paint_image(painter, image, *faded, corners, hl);
             }
-            Prim::Text { pos, text, size, anchor, angle, element, .. } => {
+            Prim::Text { pos, text, size, anchor, angle, face, element } => {
                 if opts.only.is_some() {
                     continue;
                 }
@@ -331,7 +331,7 @@ pub fn paint_drawing(painter: &Painter, d: &Drawing2D, xf: &Xf, opts: &PaintOpti
                 // Four vertices a glyph.
                 let background = element.is_some_and(|e| d.background.contains(&e));
                 if budget.take(text.len().saturating_mul(4), background) {
-                    paint_text(painter, at, text, px, *anchor, *angle as f32);
+                    paint_text(painter, at, text, px, *anchor, *angle as f32, face);
                 }
             }
         }
@@ -398,8 +398,35 @@ fn paint_image(painter: &Painter, image: &std::sync::Arc<RasterImage>, faded: bo
 }
 
 /// Text anchored at `pos` and rotated by `angle` (radians, counter-clockwise on the drawing).
-fn paint_text(painter: &Painter, pos: Pos2, text: &str, px: f32, anchor: cc_views::Anchor, angle: f32) {
-    let galley = painter.layout_no_wrap(text.to_string(), egui::FontId::proportional(px), Color32::from_gray(20));
+fn paint_text(
+    painter: &Painter,
+    pos: Pos2,
+    text: &str,
+    px: f32,
+    anchor: cc_views::Anchor,
+    angle: f32,
+    face: &cc_views::TextFace,
+) {
+    let default_italic_family = (face.family.is_empty() && face.italic)
+        .then(|| {
+            cc_views::fonts::system_families()
+                .iter()
+                .find(|name| {
+                    ["Arial", "Liberation Sans", "DejaVu Sans"]
+                        .iter()
+                        .any(|candidate| name.eq_ignore_ascii_case(candidate))
+                })
+                .map(String::as_str)
+        })
+        .flatten();
+    let requested_family = if face.family.is_empty() { default_italic_family.unwrap_or("") } else { &face.family };
+    let family = if requested_family.is_empty() && face.bold && !face.italic {
+        crate::theme::semibold()
+    } else {
+        crate::theme::register_text_font(painter.ctx(), requested_family, face.bold, face.italic)
+            .unwrap_or(egui::FontFamily::Proportional)
+    };
+    let galley = painter.layout_no_wrap(text.to_string(), egui::FontId::new(px, family), Color32::from_gray(20));
     let size = galley.size();
     let local = match anchor {
         cc_views::Anchor::LeftBottom => egui::vec2(0.0, -size.y),

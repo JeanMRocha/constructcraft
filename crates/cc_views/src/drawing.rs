@@ -104,6 +104,15 @@ pub enum Anchor {
     Center,
 }
 
+/// Typeface settings carried by text drawing primitives. The empty family uses the application default.
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
+pub struct TextFace {
+    pub family: String,
+    pub bold: bool,
+    pub italic: bool,
+    pub underline: bool,
+}
+
 /// Drawing primitive, in view coordinates (meters on the view plane).
 #[derive(Debug, Clone, PartialEq)]
 pub enum Prim {
@@ -131,6 +140,8 @@ pub enum Prim {
         size: f64,
         anchor: Anchor,
         angle: f64,
+        /// Typeface settings; defaults preserve existing annotation appearance.
+        face: TextFace,
         /// The element the text annotates (hidden with it).
         element: Option<ElementId>,
     },
@@ -158,12 +169,13 @@ impl Prim {
             Prim::Fill { pts, color, element, cut } => {
                 Prim::Fill { pts: pts.iter().map(|p| f(*p)).collect(), color: *color, element: *element, cut: *cut }
             }
-            Prim::Text { pos, text, size, anchor, angle, element } => Prim::Text {
+            Prim::Text { pos, text, size, anchor, angle, face, element } => Prim::Text {
                 pos: f(*pos),
                 text: text.clone(),
                 size: *size,
                 anchor: *anchor,
                 angle: *angle,
+                face: face.clone(),
                 element: *element,
             },
             Prim::Image { origin, u, v, image, element, faded } => {
@@ -322,7 +334,15 @@ impl Drawing2D {
     }
 
     pub fn text_at(&mut self, pos: DVec2, text: impl Into<String>, size: f64, anchor: Anchor, angle: f64) {
-        self.prims.push(Prim::Text { pos, text: text.into(), size, anchor, angle, element: None });
+        self.prims.push(Prim::Text {
+            pos,
+            text: text.into(),
+            size,
+            anchor,
+            angle,
+            face: TextFace::default(),
+            element: None,
+        });
     }
 
     /// Text that annotates `element` (a tag, a dimension value…).
@@ -335,7 +355,21 @@ impl Drawing2D {
         angle: f64,
         element: Option<ElementId>,
     ) {
-        self.prims.push(Prim::Text { pos, text: text.into(), size, anchor, angle, element });
+        self.prims.push(Prim::Text { pos, text: text.into(), size, anchor, angle, face: TextFace::default(), element });
+    }
+
+    /// Text with a chosen typeface that annotates `element`.
+    pub fn styled_tag_text(
+        &mut self,
+        pos: DVec2,
+        text: impl Into<String>,
+        size: f64,
+        anchor: Anchor,
+        angle: f64,
+        face: TextFace,
+        element: Option<ElementId>,
+    ) {
+        self.prims.push(Prim::Text { pos, text: text.into(), size, anchor, angle, face, element });
     }
 
     /// Circular arc approximated with line segments.
@@ -507,6 +541,7 @@ mod tests {
             size: 2.5,
             anchor: Anchor::LeftBottom,
             angle: 0.0,
+            face: TextFace::default(),
             element: Some(ElementId(4)),
         });
         d.line(v(-50.0, -50.0), v(100.0, 50.0), LineStyle::Thin, Some(ElementId(5)));

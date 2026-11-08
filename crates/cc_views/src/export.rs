@@ -7,6 +7,7 @@ use glam::DVec2;
 use std::fmt::Write as _;
 
 const TEXT_GRAY: u8 = 20;
+const INTER_SEMIBOLD: &[u8] = include_bytes!("../../../assets/fonts/Inter-SemiBold.ttf");
 
 /// Baseline offset (in text heights) from the anchor point, and the
 /// horizontal fraction of the text width left of it.
@@ -96,19 +97,44 @@ fn svg(drawing: &Drawing2D, paper: DVec2, fonts: &[skrifa::FontRef]) -> String {
                     points.join(" ")
                 );
             }
-            Prim::Text { pos, text, size, anchor, angle, .. } => {
+            Prim::Text { pos, text, size, anchor, angle, face, .. } => {
                 if text.trim().is_empty() {
                     continue;
                 }
                 if !fonts.is_empty() {
-                    let d = glyph_path(fonts, text, *pos, *size, *anchor, *angle, h);
+                    let custom = if !face.family.is_empty() {
+                        crate::fonts::system_face(&face.family, face.bold, face.italic)
+                    } else if face.bold {
+                        Some(crate::fonts::FontFile { data: INTER_SEMIBOLD.to_vec(), index: 0 })
+                    } else {
+                        None
+                    };
+                    let custom_ref = custom.as_ref().and_then(|f| f.font_ref());
+                    let mut selected = Vec::with_capacity(fonts.len() + 1);
+                    if let Some(font) = custom_ref {
+                        selected.push(font);
+                    }
+                    selected.extend_from_slice(fonts);
+                    let d = glyph_path(&selected, text, *pos, *size, *anchor, *angle, face.italic, h);
                     if !d.is_empty() {
-                        let _ = writeln!(s, r#"<path d="{d}" fill="rgb({g},{g},{g})" stroke="none"/>"#, g = TEXT_GRAY);
+                        let stroke = if face.bold {
+                            format!(
+                                r#" stroke="rgb({g},{g},{g})" stroke-width="{}" stroke-linejoin="round""#,
+                                num(*size * 0.018),
+                                g = TEXT_GRAY
+                            )
+                        } else {
+                            r#" stroke="none""#.into()
+                        };
+                        let _ = writeln!(s, r#"<path d="{d}" fill="rgb({g},{g},{g})"{stroke}/>"#, g = TEXT_GRAY);
                     }
                     continue;
                 }
                 let (base, frac) = anchor_offsets(*anchor);
                 let text_anchor = if frac == 0.0 { "start" } else { "middle" };
+                let family = if face.family.is_empty() { "Helvetica, Arial, sans-serif" } else { &face.family };
+                let weight = if face.bold { "bold" } else { "normal" };
+                let font_style = if face.italic { "italic" } else { "normal" };
                 // Offset the baseline in the text's own (rotated) frame.
                 let up = DVec2::new(-angle.sin(), angle.cos());
                 let p = *pos - up * (base * size);
@@ -119,7 +145,8 @@ fn svg(drawing: &Drawing2D, paper: DVec2, fonts: &[skrifa::FontRef]) -> String {
                 };
                 let _ = writeln!(
                     s,
-                    r#"<text x="{}" y="{}" font-family="Helvetica, Arial, sans-serif" font-size="{}" text-anchor="{text_anchor}" fill="rgb({g},{g},{g})" stroke="none"{rotate}>{}</text>"#,
+                    r#"<text x="{}" y="{}" font-family="{}" font-size="{}" font-weight="{weight}" font-style="{font_style}" text-anchor="{text_anchor}" fill="rgb({g},{g},{g})" stroke="none"{rotate}>{}</text>"#,
+                    xml_escape(family),
                     num(p.x),
                     y(p.y),
                     num(*size),
@@ -257,7 +284,7 @@ pub fn to_pdf(drawing: &Drawing2D, paper: DVec2) -> Vec<u8> {
                 }
                 let _ = writeln!(Utf8(&mut content), "q {gs}{} rg {path}h f Q", rgb([r, g, b]));
             }
-            Prim::Text { pos, text, size, anchor, angle, .. } => {
+            Prim::Text { pos, text, size, anchor, angle, face, .. } => {
                 let bytes: Vec<u8> = text.chars().map(win_ansi).collect();
                 if text.trim().is_empty() {
                     continue;
@@ -271,7 +298,13 @@ pub fn to_pdf(drawing: &Drawing2D, paper: DVec2) -> Vec<u8> {
                 let g = num(TEXT_GRAY as f64 / 255.0);
                 let _ = write!(
                     Utf8(&mut content),
-                    "BT {g} g /F1 {} Tf {} {} {} {} {} {} Tm ",
+                    "BT {g} g /F{} {} Tf {} {} {} {} {} {} Tm ",
+                    match (face.bold, face.italic) {
+                        (false, false) => 1,
+                        (true, false) => 2,
+                        (false, true) => 3,
+                        (true, true) => 4,
+                    },
                     num(*size),
                     num(cos),
                     num(sin),
@@ -315,14 +348,14 @@ pub fn to_pdf(drawing: &Drawing2D, paper: DVec2) -> Vec<u8> {
     for (i, a) in alphas.iter().enumerate() {
         let _ = write!(ext, "/GS{i} << /Type /ExtGState /ca {} >> ", num(*a as f64 / 255.0));
     }
-    // Objects 1 to 5 are fixed; each picture takes two numbers from 6 (the image, then its alpha mask).
-    let picture_object = |i: usize| 6 + 2 * i;
+    // Objects 1 to 8 are fixed; each picture takes two numbers from 9 (the image, then its alpha mask).
+    let picture_object = |i: usize| 9 + 2 * i;
     let xobjects: String = (0..pictures.len()).map(|i| format!("/Im{i} {} 0 R ", picture_object(i))).collect();
     let mut objects: Vec<Vec<u8>> = vec![
         b"<< /Type /Catalog /Pages 2 0 R >>".to_vec(),
         b"<< /Type /Pages /Kids [3 0 R] /Count 1 >>".to_vec(),
         format!(
-            "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 {} {}] /Resources << /Font << /F1 5 0 R >> /ExtGState << {ext}>> /XObject << {xobjects}>> >> /Contents 4 0 R >>",
+            "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 {} {}] /Resources << /Font << /F1 5 0 R /F2 6 0 R /F3 7 0 R /F4 8 0 R >> /ExtGState << {ext}>> /XObject << {xobjects}>> >> /Contents 4 0 R >>",
             num(w),
             num(h)
         )
@@ -332,7 +365,11 @@ pub fn to_pdf(drawing: &Drawing2D, paper: DVec2) -> Vec<u8> {
     stream.extend(&content);
     stream.extend(b"\nendstream");
     objects.push(stream);
-    objects.push(b"<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>".to_vec());
+    for font in ["Helvetica", "Helvetica-Bold", "Helvetica-Oblique", "Helvetica-BoldOblique"] {
+        objects.push(
+            format!("<< /Type /Font /Subtype /Type1 /BaseFont /{font} /Encoding /WinAnsiEncoding >>").into_bytes(),
+        );
+    }
     for (i, (pw, ph, rgb, alpha)) in pictures.iter().enumerate() {
         let image_stream = |extra: &str, color: &str, data: &[u8]| {
             let mut o = format!(
@@ -448,6 +485,7 @@ fn glyph_path(
     size: f64,
     anchor: Anchor,
     angle: f64,
+    italic: bool,
     page_h: f64,
 ) -> String {
     use skrifa::MetadataProvider;
@@ -471,7 +509,7 @@ fn glyph_path(
     for (f, g) in glyphs {
         if let Some(glyph) = outlines.get(f).and_then(|o| o.get(g)) {
             let at = |gx: f32, gy: f32| {
-                let p = origin + along * (x + gx as f64) + up * gy as f64;
+                let p = origin + along * (x + gx as f64 + if italic { gy as f64 * 0.2 } else { 0.0 }) + up * gy as f64;
                 DVec2::new(p.x, page_h - p.y)
             };
             let mut pen = GlyphPen { d: &mut d, at: &at };

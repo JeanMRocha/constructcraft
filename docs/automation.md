@@ -41,6 +41,13 @@ ccad -p house.ccad --save run element_set id=57 'params={"shape": {"Gable": {"sl
 
 Objects merge field by field; arrays and plain values replace; `null` clears an optional value. `material_set`, `units_set` (shaped like `material_get`, `units_get`) work alike.
 
+**Text note style.** `text_create` makes a note using its type's text size. `element_get` and `element_set` then read or change `size_mm` (mm, `null` uses the type), `font_family` (an installed system family), `alignment` (`Left`, `Center`, `Right`), `bold`, `italic` and `underline`. Missing fields in older projects keep these defaults.
+
+```sh
+ccad -p house.ccad run element_get id=42
+ccad -p house.ccad --save run element_set id=42 'params={"size_mm": 4, "font_family": "Arial", "alignment": "Center", "bold": true, "italic": false, "underline": true}'
+```
+
 **View graphics.** What a view shows and how is part of the view: `view_graphics_get` lists every category's visibility and overrides, the applied filters and the element overrides; `view_graphics_set` shows or hides a category and overrides its projection and cut lines (color, weight in paper mm, pattern), surface and cut fills (color, pattern), halftone and transparency; `element_override_set` and `element_hide_in_view` do the same for single elements in one view. Overrides are objects like `{"cut_lines": {"color": [255, 0, 0], "weight": 0.5, "pattern": "Dash"}, "cut_fill": {"pattern": "Solid", "color": [200, 200, 200]}, "halftone": true, "transparency": 0.4}`; they merge like `params` (`null` resets an attribute, `reset: true` starts over). They apply to plans, ceiling plans, elevations, sections, 3D views, sheets and PDF/SVG exports.
 
 ```sh
