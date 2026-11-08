@@ -294,83 +294,101 @@ fn text_context_menu(
             return;
         };
         let note = note.clone();
-        let set = |state: &mut AppState, field: &str, f: &dyn Fn(&mut TextNote)| {
-            crate::engine_edit::element(state, id, Some(crate::properties::key((id, field))), |e| {
-                if let ElementKind::Text(n) = &mut e.kind {
-                    f(n);
-                }
-            });
-        };
-
         ui.label(t!("section-text"));
         ui.separator();
-        let inherited_size = state
-            .project()
-            .element(id)
-            .and_then(|e| state.project().element_type(e.type_id))
-            .and_then(|ty| match &ty.data {
-                cc_core::TypeData::Text { size, .. } => Some(*size),
-                _ => None,
-            })
-            .unwrap_or(2.5);
-        let mut custom_size = note.size_mm.is_some();
-        if ui.checkbox(&mut custom_size, t!("text-custom-size")).changed() {
-            set(state, "text-size-mode", &|n| n.size_mm = custom_size.then_some(inherited_size));
-        }
-        if custom_size {
-            let mut size = note.size_mm.unwrap_or(inherited_size);
-            if ui.add(egui::DragValue::new(&mut size).speed(0.1).range(0.5..=1000.0).suffix(" mm")).changed() {
-                set(state, "text-size", &|n| n.size_mm = Some(size));
-            }
-        } else {
-            ui.label(format!("{}: {} mm", t!("text-size"), cc_views::format::number(inherited_size, 1)));
-        }
-
-        let families = cc_views::fonts::system_families();
-        let mut family = note.font_family.clone();
-        let selected_font = if family.is_empty() { t!("text-font-default") } else { family.clone() };
-        egui::ComboBox::from_id_salt(("text-context-font", id.0)).selected_text(selected_font).show_ui(ui, |ui| {
-            ui.selectable_value(&mut family, String::new(), t!("text-font-default"));
-            for name in families {
-                ui.selectable_value(&mut family, name.clone(), name);
-            }
-        });
-        if family != note.font_family {
-            set(state, "text-font", &|n| n.font_family = family.clone());
-        }
-
-        let mut alignment = note.alignment;
-        egui::ComboBox::from_id_salt(("text-context-alignment", id.0))
-            .selected_text(match alignment {
-                cc_core::TextAlignment::Left => t!("text-align-left"),
-                cc_core::TextAlignment::Center => t!("text-align-center"),
-                cc_core::TextAlignment::Right => t!("text-align-right"),
-            })
-            .show_ui(ui, |ui| {
-                ui.selectable_value(&mut alignment, cc_core::TextAlignment::Left, t!("text-align-left"));
-                ui.selectable_value(&mut alignment, cc_core::TextAlignment::Center, t!("text-align-center"));
-                ui.selectable_value(&mut alignment, cc_core::TextAlignment::Right, t!("text-align-right"));
-            });
-        if alignment != note.alignment {
-            set(state, "text-alignment", &|n| n.alignment = alignment);
-        }
-
-        for (label, field, value) in [
-            (t!("text-bold"), "bold", note.bold),
-            (t!("text-italic"), "italic", note.italic),
-            (t!("text-underline"), "underline", note.underline),
-        ] {
-            let mut enabled = value;
-            if ui.checkbox(&mut enabled, label).changed() {
-                set(state, field, &|n| match field {
-                    "bold" => n.bold = enabled,
-                    "italic" => n.italic = enabled,
-                    _ => n.underline = enabled,
-                });
-            }
-        }
+        text_format_controls(ui, state, id, &note);
     });
     true
+}
+
+/// The formatting controls shared by the properties palette and the text context menu.
+pub(crate) fn text_format_controls(ui: &mut Ui, state: &mut AppState, id: ElementId, note: &TextNote) {
+    let set = |state: &mut AppState, field: &str, f: &dyn Fn(&mut TextNote)| {
+        crate::engine_edit::element(state, id, Some(crate::properties::key((id, field))), |e| {
+            if let ElementKind::Text(n) = &mut e.kind {
+                f(n);
+            }
+        });
+    };
+    let inherited_size = state
+        .project()
+        .element(id)
+        .and_then(|e| state.project().element_type(e.type_id))
+        .and_then(|ty| match &ty.data {
+            cc_core::TypeData::Text { size, .. } => Some(*size),
+            _ => None,
+        })
+        .unwrap_or(2.5);
+    let mut custom_size = note.size_mm.is_some();
+    if ui.checkbox(&mut custom_size, t!("text-custom-size")).changed() {
+        set(state, "text-size-mode", &|n| n.size_mm = custom_size.then_some(inherited_size));
+    }
+    if custom_size {
+        let mut size = note.size_mm.unwrap_or(inherited_size);
+        if ui.add(egui::DragValue::new(&mut size).speed(0.1).range(0.5..=1000.0).suffix(" mm")).changed() {
+            set(state, "text-size", &|n| n.size_mm = Some(size));
+        }
+    } else {
+        ui.label(format!("{}: {} mm", t!("text-size"), cc_views::format::number(inherited_size, 1)));
+    }
+
+    let families = cc_views::fonts::system_families();
+    let mut family = note.font_family.clone();
+    let selected_font = if family.is_empty() { t!("text-font-default") } else { family.clone() };
+    egui::ComboBox::from_id_salt(("text-font", id.0)).selected_text(selected_font).show_ui(ui, |ui| {
+        ui.selectable_value(&mut family, String::new(), t!("text-font-default"));
+        for name in families {
+            ui.selectable_value(&mut family, name.clone(), name);
+        }
+    });
+    if family != note.font_family {
+        set(state, "text-font", &|n| n.font_family = family.clone());
+    }
+
+    let mut alignment = note.alignment;
+    egui::ComboBox::from_id_salt(("text-alignment", id.0))
+        .selected_text(match alignment {
+            cc_core::TextAlignment::Left => t!("text-align-left"),
+            cc_core::TextAlignment::Center => t!("text-align-center"),
+            cc_core::TextAlignment::Right => t!("text-align-right"),
+        })
+        .show_ui(ui, |ui| {
+            ui.selectable_value(&mut alignment, cc_core::TextAlignment::Left, t!("text-align-left"));
+            ui.selectable_value(&mut alignment, cc_core::TextAlignment::Center, t!("text-align-center"));
+            ui.selectable_value(&mut alignment, cc_core::TextAlignment::Right, t!("text-align-right"));
+        });
+    if alignment != note.alignment {
+        set(state, "text-alignment", &|n| n.alignment = alignment);
+    }
+
+    for (label, field, value) in [
+        (t!("text-bold"), "bold", note.bold),
+        (t!("text-italic"), "italic", note.italic),
+        (t!("text-underline"), "underline", note.underline),
+    ] {
+        let mut enabled = value;
+        if ui.checkbox(&mut enabled, label).changed() {
+            set(state, field, &|n| match field {
+                "bold" => n.bold = enabled,
+                "italic" => n.italic = enabled,
+                _ => n.underline = enabled,
+            });
+        }
+    }
+
+    let mut multiline = note.width.is_some();
+    if ui.checkbox(&mut multiline, t!("text-multiline")).changed() {
+        let width = multiline.then_some(state.text_options.width);
+        set(state, "multiline", &|n| n.width = width);
+    }
+    if let Some(mut width) = note.width {
+        ui.horizontal(|ui| {
+            ui.label(t!("prop-text-width"));
+            if ui.add(egui::DragValue::new(&mut width).speed(1.0).range(5.0..=1000.0).suffix(" mm")).changed() {
+                set(state, "width", &|n| n.width = Some(width));
+            }
+        });
+    }
 }
 
 /// The text editor over `view`, when open there: Enter (single-line) or
