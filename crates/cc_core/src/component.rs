@@ -37,6 +37,8 @@ pub enum ComponentKind {
     Electrical,
     #[default]
     Generic,
+    /// Trees and other ornamental plants.
+    Planting,
     /// Doors: with a [`HostOpening`], their types are of the door category.
     Door,
     /// Windows: with a [`HostOpening`], their types are of the window category.
@@ -51,13 +53,14 @@ pub enum ComponentKind {
 }
 
 impl ComponentKind {
-    pub const ALL: [ComponentKind; 11] = [
+    pub const ALL: [ComponentKind; 12] = [
         ComponentKind::Furniture,
         ComponentKind::Casework,
         ComponentKind::Plumbing,
         ComponentKind::Lighting,
         ComponentKind::Electrical,
         ComponentKind::Generic,
+        ComponentKind::Planting,
         ComponentKind::Door,
         ComponentKind::Window,
         ComponentKind::Niche,
@@ -73,6 +76,7 @@ impl ComponentKind {
             ComponentKind::Lighting => "comp-kind-lighting",
             ComponentKind::Electrical => "comp-kind-electrical",
             ComponentKind::Generic => "comp-kind-generic",
+            ComponentKind::Planting => "comp-kind-planting",
             ComponentKind::Door => "comp-kind-door",
             ComponentKind::Window => "comp-kind-window",
             ComponentKind::Niche => "comp-kind-niche",

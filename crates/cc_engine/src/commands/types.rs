@@ -373,7 +373,7 @@ pub struct ComponentCreate {
     /// The definition: `params` (name, value, kind, instance) and `items` (pieces), shaped like a component type's `params.def` in `type_get`. Left out, the component starts from its `kind`.
     #[serde(default)]
     pub def: Value,
-    /// The kind a component made without a `def` starts from: `Furniture`, `Casework`, `Plumbing` and `Electrical` (a box sized by width, depth and height parameters), `Lighting` (a cylinder sized by diameter and height), `Door` (width and height) and `Window` (width, height and sill), which cut their opening in a wall, or `Generic` (the default: a fixed box and no parameters, which are yours to add). Not given together with `def`, whose own `kind` says it.
+    /// The kind a component made without a `def` starts from: `Furniture`, `Casework`, `Plumbing` and `Electrical` (a box sized by width, depth and height parameters), `Lighting` (a cylinder sized by diameter and height), `Door` (width and height) and `Window` (width, height and sill), which cut their opening in a wall, `Planting` (an empty tree or plant component to shape), or `Generic` (the default: a fixed box and no parameters, which are yours to add). Not given together with `def`, whose own `kind` says it.
     #[serde(default)]
     pub kind: Option<String>,
 }
@@ -453,7 +453,7 @@ pub fn starter_def(kind: ComponentKind) -> Option<ComponentDef> {
             }
         }
         // Empty: its pieces are the user's to draw.
-        ComponentKind::Generic => ComponentDef { kind, ..Default::default() },
+        ComponentKind::Generic | ComponentKind::Planting => ComponentDef { kind, ..Default::default() },
         ComponentKind::Door => cc_core::openings::door_def(&names(), 0.8, 2.1, ""),
         ComponentKind::Window => cc_core::openings::window_def(&names(), 1.2, 1.2, 1.0, ""),
         ComponentKind::Niche => cc_core::openings::niche_def(&names(), (0.6, 0.6, 0.1, 0.9)),

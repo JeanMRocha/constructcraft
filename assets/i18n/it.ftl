@@ -89,6 +89,7 @@ comp-kind-casework = Mobili fissi
 comp-kind-plumbing = Apparecchi sanitari
 comp-kind-lighting = Illuminazione
 comp-kind-generic = Generico
+comp-kind-planting = Alberi e piante
 comp-kind-door = Porta
 comp-kind-window = Finestra
 comp-kind-niche = Nicchia

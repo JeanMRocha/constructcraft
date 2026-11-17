@@ -89,6 +89,7 @@ comp-kind-casework = Zabudowa meblowa
 comp-kind-plumbing = Urządzenia sanitarne
 comp-kind-lighting = Oświetlenie
 comp-kind-generic = Ogólne
+comp-kind-planting = Drzewa i rośliny
 comp-kind-door = Drzwi
 comp-kind-window = Okno
 comp-kind-niche = Wnęka

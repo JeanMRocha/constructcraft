@@ -89,6 +89,7 @@ comp-kind-casework = Вбудовані меблі
 comp-kind-plumbing = Сантехнічні прилади
 comp-kind-lighting = Освітлення
 comp-kind-generic = Загальний
+comp-kind-planting = Дерева та рослини
 comp-kind-door = Двері
 comp-kind-window = Вікно
 comp-kind-niche = Ніша

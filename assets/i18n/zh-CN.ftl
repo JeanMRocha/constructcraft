@@ -89,6 +89,7 @@ comp-kind-casework = 固定家具
 comp-kind-plumbing = 卫浴装置
 comp-kind-lighting = 照明
 comp-kind-generic = 常规
+comp-kind-planting = 树木和植物
 comp-kind-door = 门
 comp-kind-window = 窗
 comp-kind-niche = 壁龛

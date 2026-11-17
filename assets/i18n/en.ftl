@@ -89,6 +89,7 @@ comp-kind-casework = Casework
 comp-kind-plumbing = Plumbing Fixtures
 comp-kind-lighting = Lighting
 comp-kind-generic = Generic
+comp-kind-planting = Trees and plants
 comp-kind-door = Door
 comp-kind-window = Window
 comp-kind-niche = Niche

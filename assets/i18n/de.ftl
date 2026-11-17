@@ -89,6 +89,7 @@ comp-kind-casework = Einbaumöbel
 comp-kind-plumbing = Sanitärobjekte
 comp-kind-lighting = Beleuchtung
 comp-kind-generic = Allgemein
+comp-kind-planting = Bäume und Pflanzen
 comp-kind-door = Tür
 comp-kind-window = Fenster
 comp-kind-niche = Nische

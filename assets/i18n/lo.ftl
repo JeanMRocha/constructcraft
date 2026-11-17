@@ -89,6 +89,7 @@ comp-kind-casework = ຕູ້ບິວອິນ
 comp-kind-plumbing = ສຸຂະພັນ
 comp-kind-lighting = ດອກໄຟ
 comp-kind-generic = ທົ່ວໄປ
+comp-kind-planting = ຕົ້ນໄມ້ ແລະ ພືດ
 param-kind-length = ຄວາມຍາວ
 param-kind-angle = ມຸມ
 param-kind-number = ຈຳນວນຕົວເລກ

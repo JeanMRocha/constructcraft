@@ -89,6 +89,7 @@ comp-kind-casework = Agencement
 comp-kind-plumbing = Appareils sanitaires
 comp-kind-lighting = Éclairage
 comp-kind-generic = Générique
+comp-kind-planting = Arbres et plantes
 comp-kind-door = Porte
 comp-kind-window = Fenêtre
 comp-kind-niche = Niche

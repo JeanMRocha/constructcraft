@@ -89,6 +89,7 @@ comp-kind-casework = Marcenaria
 comp-kind-plumbing = Louças e metais
 comp-kind-lighting = Iluminação
 comp-kind-generic = Genérico
+comp-kind-planting = Árvores e plantas
 comp-kind-door = Porta
 comp-kind-window = Janela
 comp-kind-niche = Nicho

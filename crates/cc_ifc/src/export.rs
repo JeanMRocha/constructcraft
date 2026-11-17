@@ -3451,6 +3451,7 @@ fn component_entity(def: &cc_core::ComponentDef) -> (&'static str, &'static str,
         cc_core::ComponentKind::Electrical => ("IFCBUILDINGELEMENTPROXY", "NOTDEFINED"),
         // A niche is written as its wall's opening, never as a product of its own.
         cc_core::ComponentKind::Generic
+        | cc_core::ComponentKind::Planting
         | cc_core::ComponentKind::TitleBlock
         | cc_core::ComponentKind::Detail
         | cc_core::ComponentKind::Niche => ("IFCBUILDINGELEMENTPROXY", "NOTDEFINED"),
